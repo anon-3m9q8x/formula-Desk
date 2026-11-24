@@ -28,11 +28,11 @@ function columnIndex(name) {
 }
 
 // Data rows carry increasing sheet row numbers (gaps allowed, e.g. filtered or hidden rows).
-function rowNumbers(table) {
+function rowNumbers(table, min = 2) {
   const nums = table.slice(1).map(row => row[0]?.trim());
   if (!nums.length || !nums.every(n => /^\d+$/.test(n))) return false;
   const values = nums.map(Number);
-  return values[0] >= 2 && values.every((n,i) => !i || n > values[i-1]) && values.at(-1) - values[0] < 5000;
+  return values[0] >= min && values.every((n,i) => !i || n > values[i-1]) && values.at(-1) - values[0] < 5000;
 }
 
 function readTable(input) {
@@ -61,10 +61,12 @@ function readTable(input) {
   const numbered = table[0].length > 1 && !table[0][0].trim() &&
     Number.isSafeInteger(firstNumber) && firstNumber >= 2 &&
     rowNumbers(table);
+  // Without a header row, a leading column of increasing whole numbers is the sheet's row numbers.
+  const bare = !numbered && table.every(row => row.length > 1) && rowNumbers([[], ...table], 1);
   if (hasAxis) {
     const start = axis.indexOf(letters[0]);
     // Some Markdown exports shift the letters left and pad the last axis cell.
-    const alignedStart = numbered ? Math.max(0, start - 1) : start;
+    const alignedStart = numbered || bare ? Math.max(0, start - 1) : start;
     left = Math.max(0, columnIndex(letters[0]) - alignedStart);
   }
   if (numbered) {
@@ -77,8 +79,17 @@ function readTable(input) {
     }
     table = placed;
   }
+  if (bare) {
+    top = Number(table[0][0]);
+    const placed = [];
+    for (const row of table) {
+      while (top + placed.length < Number(row[0])) placed.push([]);
+      placed.push(row.slice(1));
+    }
+    table = placed;
+  }
   const width = table.reduce((max,r) => Math.max(max,r.length),0);
   if (!width || !table.some(r => r.some(v=>v.trim()))) throw Error('値の入った表を貼り付けてください。');
   const rows = table.map((r,i) => Array.from({length:width},(_,j) => r[j] ?? ''));
-  return {rows,left,top};
+  return {rows,left,top,positioned:hasAxis||numbered||bare};
 }

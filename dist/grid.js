@@ -161,7 +161,7 @@ function pasteRange(text,pack,valuesOnly){
   writeCells(r,c,matrix,valuesOnly?{literal:true}:{styles:pack.styles});return}
  const s=text.replace(/\r\n?/g,'\n').replace(/\n$/,'');
  // A range copied with column letters or row numbers is placed at its original cells.
- if(!valuesOnly&&s.includes('\n')){let table=null;try{table=readTable(s)}catch{}if(table&&(table.left>0||table.top>1)){ingest(s);resetGridSelection();return}}
+ if(!valuesOnly&&s.includes('\n')){let table=null;try{table=readTable(s)}catch{}if(table?.positioned){ingest(s);resetGridSelection();return}}
  if(!valuesOnly&&/^\s*\|/.test(s)&&s.includes('\n')&&/^\s*\|?[ :-]*-{2}/.test(s.split('\n')[1])){ingest(s);resetGridSelection();return}
  writeCells(r,c,readDelimited(s,'\t'),{literal:valuesOnly});
 }
