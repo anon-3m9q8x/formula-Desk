@@ -32,4 +32,9 @@ const tsv=[['B','C','D','E','F','G','H','I'],expected[0].slice(1),...expected.sl
 const plain=parse(tsv);const corner=parse('\t'+tsv);assert.equal(corner.left,1);assert.equal(corner.top,9);assert.equal(JSON.stringify(corner.rows),JSON.stringify(plain.rows));assert.equal(plain.left,1);assert.equal(plain.top,9);
 assert.equal(JSON.stringify(plain.rows),JSON.stringify(expected.map(row=>row.slice(1))));
 assert.equal(JSON.stringify(parse(expected.map(r=>r.join('\t')).slice(1).join('\n').replace(/^/,expected[0].slice(1).join('\t')+'\n')).rows),JSON.stringify(expected.map(row=>row.slice(1))));
-console.log('Verified B9:I25, all 16 row numbers, TSV/CSV gutters, ordinary blank cells, named IDs and formula references.');
+const gaps=parse('\tB\tC\n\t国\t都市\n10\t韓国\tソウル\n13\tカナダ\tトロント\n14\tイギリス\tロンドン');
+assert.equal(gaps.top,9);assert.equal(gaps.left,1);
+assert.equal(JSON.stringify(gaps.rows),JSON.stringify([['国','都市'],['韓国','ソウル'],['',''],['',''],['カナダ','トロント'],['イギリス','ロンドン']]));
+assert.equal(JSON.stringify(parse('B\tC\n国\t都市\n10\t韓国\tソウル\n12\tカナダ\tトロント').rows),JSON.stringify([['国','都市'],['韓国','ソウル'],['',''],['カナダ','トロント']]));
+assert.ok(!plain.rows.flat().includes('B'));
+console.log('Verified row gaps, B9:I25, all 16 row numbers, TSV/CSV gutters, ordinary blank cells, named IDs and formula references.');

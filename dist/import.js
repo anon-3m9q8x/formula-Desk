@@ -27,6 +27,14 @@ function columnIndex(name) {
   return [...name].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
 }
 
+// Data rows carry increasing sheet row numbers (gaps allowed, e.g. filtered or hidden rows).
+function rowNumbers(table) {
+  const nums = table.slice(1).map(row => row[0]?.trim());
+  if (!nums.length || !nums.every(n => /^\d+$/.test(n))) return false;
+  const values = nums.map(Number);
+  return values[0] >= 2 && values.every((n,i) => !i || n > values[i-1]) && values.at(-1) - values[0] < 5000;
+}
+
 function readTable(input) {
   const text = input.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').replace(/\n$/, '');
   if (!text.trim()) throw Error('表を貼り付けてください。');
@@ -46,13 +54,13 @@ function readTable(input) {
   const rowNumber = Number(table[1]?.[0]);
   const used = row => { let n = row.length; while (n && !row[n-1].trim()) n--; return n; };
   if (table.length > 2 && table[0][0]?.trim() && Number.isSafeInteger(rowNumber) && rowNumber >= 2 &&
-      table.slice(1).every((row,i) => row[0]?.trim() === String(rowNumber+i)) &&
+      rowNumbers(table) &&
       used(table[0]) === Math.max(...table.slice(1).map(row => row.length)) - 1)
     table[0] = ['', ...table[0].slice(0, used(table[0]))];
   const firstNumber = Number(table[1]?.[0]);
   const numbered = table[0].length > 1 && !table[0][0].trim() &&
     Number.isSafeInteger(firstNumber) && firstNumber >= 2 &&
-    table.slice(1).every((row,i) => row[0]?.trim() === String(firstNumber+i));
+    rowNumbers(table);
   if (hasAxis) {
     const start = axis.indexOf(letters[0]);
     // Some Markdown exports shift the letters left and pad the last axis cell.
@@ -61,7 +69,13 @@ function readTable(input) {
   }
   if (numbered) {
     top = firstNumber - 1;
-    table = table.map(row => row.slice(1));
+    // Each row is placed by its own row number; skipped rows stay blank.
+    const placed = [table[0].slice(1)];
+    for (const row of table.slice(1)) {
+      while (top + placed.length < Number(row[0])) placed.push([]);
+      placed.push(row.slice(1));
+    }
+    table = placed;
   }
   const width = table.reduce((max,r) => Math.max(max,r.length),0);
   if (!width || !table.some(r => r.some(v=>v.trim()))) throw Error('値の入った表を貼り付けてください。');
