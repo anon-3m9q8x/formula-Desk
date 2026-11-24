@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let rows=[['部署','担当者','売上'],['営業部','佐藤','120000'],['企画部','鈴木','85000'],['営業部','田中','96000'],['開発部','高橋','110000']], platform='Excel',sample=true;
+let rows=[[]], platform='Excel',sample=false;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let formats={},calculated={},proposal=null;
 let left=0,topRow=1;
