@@ -17,14 +17,15 @@ function questionAggregate(text,headers,data,range){
   const pos=f.alias?q.indexOf(f.alias):-1;
   const after=pos<0?'':q.slice(pos+f.alias.length);
   if(/^(?:欄)?(?:が|は|の|を)?(?:なく|ない|なし|無し|無く|空白|空欄|未入力|未設定)/.test(after)){
-   conditions.push({col:f.col,value:''});continue;
+   conditions.push({col:f.col,value:'',pos});continue;
   }
   const values=[...new Set(data.map(r=>String(r[f.col]??'')).filter(Boolean))];
   const found=values.filter(v=>!/^\d+$/.test(v)&&q.includes(questionText(v))).sort((a,b)=>b.length-a.length);
-  if(found.length){conditions.push({col:f.col,value:found[0]});continue}
+  if(found.length){conditions.push({col:f.col,value:found[0],pos:q.indexOf(questionText(found[0]))});continue}
   const duration=f.names.includes('期間')&&q.match(/\d+(?:週間|か月|ヶ月|日間)/);
-  if(duration)conditions.push({col:f.col,value:duration[0]});
+  if(duration)conditions.push({col:f.col,value:duration[0],pos:Math.min(...[pos,duration.index].filter(n=>n>=0))});
  }
+ conditions.sort((a,b)=>a.pos-b.pos);
  if(!conditions.length||conditions.length===1&&conditions[0].value!=='')return null;
  if(/または|またわ|もしくは|あるいは|以外|以上|以下|未満/.test(q))return {error:'条件を特定できません。列名と、一致させる値または「空欄」を指定してください。'};
  const numeric=fields.filter(f=>!conditions.some(c=>c.col===f.col)&&data.some(r=>r[f.col]?.trim())&&data.every(r=>!r[f.col]?.trim()||numberCell(r[f.col])));

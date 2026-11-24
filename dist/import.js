@@ -42,6 +42,13 @@ function readTable(input) {
     letters.every((v,i) => /^[A-Z]{1,3}$/.test(v) && (!i || columnIndex(v) === columnIndex(letters[i-1])+1)) &&
     axis.slice(axis.indexOf(letters[0]),axis.indexOf(letters[0])+letters.length).every(Boolean);
   if (hasAxis) table = table.slice(1);
+  // Row numbers copied from a sheet often lose the empty corner cell in the header row.
+  const rowNumber = Number(table[1]?.[0]);
+  const used = row => { let n = row.length; while (n && !row[n-1].trim()) n--; return n; };
+  if (table.length > 2 && table[0][0]?.trim() && Number.isSafeInteger(rowNumber) && rowNumber >= 2 &&
+      table.slice(1).every((row,i) => row[0]?.trim() === String(rowNumber+i)) &&
+      used(table[0]) === Math.max(...table.slice(1).map(row => row.length)) - 1)
+    table[0] = ['', ...table[0].slice(0, used(table[0]))];
   const firstNumber = Number(table[1]?.[0]);
   const numbered = table[0].length > 1 && !table[0][0].trim() &&
     Number.isSafeInteger(firstNumber) && firstNumber >= 2 &&
