@@ -28,6 +28,17 @@ function questionAggregate(text,headers,data,range){
  conditions.sort((a,b)=>a.pos-b.pos);
  if(!conditions.length||conditions.length===1&&conditions[0].value!=='')return null;
  if(/または|またわ|もしくは|あるいは|以外|以上|以下|未満/.test(q))return {error:'条件を特定できません。列名と、一致させる値または「空欄」を指定してください。'};
+ // 「〇〇がなく」の列が、他の条件に合う行で一つも空欄でないときは、その行がすべて空欄の列を「ない」とみなす。
+ const filled=conditions.filter(c=>c.value!=='');
+ const matching=data.filter(r=>filled.every(c=>String(r[c.col]??'').trim()===c.value));
+ for(const c of conditions){
+  if(c.value!==''||!filled.length||!matching.length||matching.some(r=>!String(r[c.col]??'').trim()))continue;
+  const used=new Set(conditions.map(x=>x.col));
+  const candidates=fields.filter(f=>f.header.trim()&&!used.has(f.col)&&data.some(r=>String(r[f.col]??'').trim())&&
+   matching.every(r=>!String(r[f.col]??'').trim())&&!data.every(r=>!String(r[f.col]??'').trim()||numberCell(r[f.col])))
+   .sort((a,b)=>Math.abs(a.col-c.col)-Math.abs(b.col-c.col));
+  if(candidates.length){c.named=c.col;c.col=candidates[0].col}
+ }
  const numeric=fields.filter(f=>!conditions.some(c=>c.col===f.col)&&data.some(r=>r[f.col]?.trim())&&data.every(r=>!r[f.col]?.trim()||numberCell(r[f.col])));
  const targets=numeric.filter(f=>f.alias);
  const target=targets.length===1?targets[0]:numeric.length===1?numeric[0]:null;
@@ -35,5 +46,5 @@ function questionAggregate(text,headers,data,range){
  const fn=operation+'IFS';
  const args=operation==='COUNT'?[]:[range(target.col)];
  for(const c of conditions)args.push(range(c.col),'"'+c.value.replaceAll('"','""')+'"');
- return {fn,formula:'='+fn+'('+args.join(',')+')',target:target?.col,conditions,note:conditions.map(c=>'「'+headers[c.col]+'」が'+(c.value?'「'+c.value+'」':'空欄')).join('、')+'の行を対象にします。'};
+ return {fn,formula:'='+fn+'('+args.join(',')+')',target:target?.col,conditions,note:conditions.map(c=>'「'+headers[c.col]+'」が'+(c.value?'「'+c.value+'」':'空欄')).join('、')+'の行を対象にします。'+conditions.filter(c=>c.named!=null).map(c=>'「'+headers[c.named]+'」は該当する行がすべて入力済みのため、空欄の「'+headers[c.col]+'」を「ない」として扱いました。').join('')};
 }

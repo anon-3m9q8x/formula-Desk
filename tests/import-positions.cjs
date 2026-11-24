@@ -27,7 +27,7 @@ assert.equal(parse('\t国\n\t韓国\n\tカナダ').rows[0][0],'');
 const context=vm.createContext({});for(const file of ['transfer','questions'])vm.runInContext(fs.readFileSync('dist/'+file+'.js','utf8'),context);
 context.table=result;
 const formula=vm.runInContext(`questionAggregate('募集締切がなく、期間が3週間のプランの費用合計を求める関数を記載しなさい。',table.rows[0],table.rows.slice(1),i=>letters(table.left+i)+(table.top+1)+':'+letters(table.left+i)+(table.top+table.rows.length-1)).formula`,context);
-assert.equal(formula,'=SUMIFS(E10:E25,F10:F25,"",D10:D25,"3週間")');
+assert.equal(formula,'=SUMIFS(E10:E25,G10:G25,"",D10:D25,"3週間")');
 const tsv=[['B','C','D','E','F','G','H','I'],expected[0].slice(1),...expected.slice(1)].map(r=>r.join('\t')).join('\n');
 const plain=parse(tsv);const corner=parse('\t'+tsv);assert.equal(corner.left,1);assert.equal(corner.top,9);assert.equal(JSON.stringify(corner.rows),JSON.stringify(plain.rows));assert.equal(plain.left,1);assert.equal(plain.top,9);
 assert.equal(JSON.stringify(plain.rows),JSON.stringify(expected.map(row=>row.slice(1))));
