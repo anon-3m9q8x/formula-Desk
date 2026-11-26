@@ -48,48 +48,9 @@ function recalculate(){
  for(const a of Object.keys(calculated))get(a);
 }
 function evaluateCell(formula,get){
- const expr=formula.slice(1).replace(/^_xlfn\.(?:_xlws\.)?/i,'').trim();
- const fn=/^(\w+)\((.*)\)$/s.exec(expr);
- const scalar=s=>/^"/.test(s)?s.slice(1,-1).replaceAll('""','"'):get(s);
- function range(s){
-  const [start,end=start]=s.replaceAll('$','').toUpperCase().split(':').map(point);
-  if((end.r-start.r+1)*(end.c-start.c+1)>200000||end.r<start.r||end.c<start.c)throw Error('#REF!');
-  return Array.from({length:end.r-start.r+1},(_,i)=>Array.from({length:end.c-start.c+1},(_,j)=>get(address(start.c+j,start.r+i))));
- }
- if(fn&&Object.hasOwn(catalog,fn[1].toUpperCase())){
-  const name=fn[1].toUpperCase(),args=fn[2].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s=>s.trim());let data=range(args[0]);
-  if(['SUMIFS','AVERAGEIFS','COUNTIFS'].includes(name)){
-   const offset=name==='COUNTIFS'?0:1;
-   if(args.length<=offset||(args.length-offset)%2)throw Error('#VALUE!');
-   const masks=[];
-   for(let i=offset;i<args.length;i+=2){
-    const cells=range(args[i]).flat(), expected=String(scalar(args[i+1])).toLowerCase();
-    if(cells.length!==data.flat().length)throw Error('#VALUE!');
-    masks.push(cells.map(cell=>String(cell).toLowerCase()===expected));
-   }
-   const values=data.flat().filter((_,i)=>masks.every(mask=>mask[i]));
-   if(name==='COUNTIFS')return [[values.length]];
-   data=[values];
-  }
-  if(name==='FILTER'){const m=/^([^=]+)=(.+)$/.exec(args[1]);if(!m)throw Error('#VALUE!');const cond=range(m[1]),v=scalar(m[2]);data=data.filter((_,i)=>String(cond[i]?.[0]).toLowerCase()===String(v).toLowerCase());if(!data.length)throw Error('#CALC!');return data}
-  if(name==='UNIQUE')return [...new Map(data.map(row=>[JSON.stringify(row),row])).values()];
-  if(name.endsWith('IF')){const v=String(scalar(args[1])).toLowerCase(),values=args[2]?range(args[2]):data;data=values.filter((_,i)=>String(data[i]?.[0]).toLowerCase()===v);if(name==='COUNTIF')return [[data.length]]}
-  const flat=data.flat();if(name==='COUNTA')return [[flat.filter(v=>v!=='').length]];
-  const error=flat.find(v=>typeof v==='string'&&/^#(?:CIRC|DIV|VALUE|REF|SPILL|CALC)/.test(v));if(error)throw Error(error);
-  const nums=flat.filter(numberCell).map(v=>Number(String(v).replaceAll(',',''))),sum=nums.reduce((a,b)=>a+b,0);
-  if(name.startsWith('AVERAGE')){if(!nums.length)throw Error('#DIV/0!');return [[sum/nums.length]]}
-  if(name==='MIN'||name==='MAX')return [[nums.length?nums.reduce(name==='MIN'?(a,b)=>Math.min(a,b):(a,b)=>Math.max(a,b)):0]];
-  return [[sum]];
- }
- if(fn)return null;
- const tokens=expr.toUpperCase().replace(/\s/g,'').match(/\$?[A-Z]+\$?\d+|(?:\d+\.?\d*|\.\d+)|[()+*/-]/g)||[];
- if(tokens.join('')!==expr.toUpperCase().replace(/\s/g,''))throw Error('#VALUE!');
- let i=0;
- function atom(){const t=tokens[i++];if(t==='-')return -atom();if(t==='+')return atom();if(t==='('){const n=add();if(tokens[i++]!==')')throw Error('#VALUE!');return n}
- if(!t||!/[\d]$/.test(t))throw Error('#VALUE!');const v=/[A-Z]/.test(t)?get(t):t;if(String(v).startsWith('#'))throw Error(v);const n=Number(String(v).replaceAll(',',''));if(!Number.isFinite(n))throw Error('#VALUE!');return n}
- function mul(){let n=atom();while(['*','/'].includes(tokens[i])){const op=tokens[i++],b=atom();if(op==='/'&&!b)throw Error('#DIV/0!');n=op==='*'?n*b:n/b}return n}
- function add(){let n=mul();while(['+','-'].includes(tokens[i])){const op=tokens[i++],b=mul();n=op==='+'?n+b:n-b}return n}
- const n=add();if(i!==tokens.length)throw Error('#VALUE!');return [[n]];
+ try{
+  return FormulaEngine.evaluate(formula,(c,r)=>get(address(c,r))).map(line=>line.map(v=>typeof v==='boolean'?(v?'TRUE':'FALSE'):v));
+ }catch(e){throw Error(e.message==='#UNSUPPORTED'?'#N/A':e.message)}
 }
 function writeCells(r,c,matrix,options={}){
  const w=matrix.reduce((n,line)=>Math.max(n,line.length),0);

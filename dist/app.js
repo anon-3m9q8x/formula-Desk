@@ -58,7 +58,10 @@ function showPlatform(name) {
 for (const [id,name] of [['excel','Excel'], ['google','Google スプレッドシート']]) {
   $(id).onclick=()=>{ showPlatform(name); suggest(); };
 }
-for(const id of ['home','dict'])$(id).onclick=()=>{let d=id==='dict';$('work').hidden=d;$('library').hidden=!d;$('platforms').hidden=d;$('title').textContent=d?'関数一覧':'関数ワークベンチ';$('intro').textContent=d?'目的に合わせて使える関数と、その役割を確認できます。':'シートに表を貼り付けて、目的に合った数式を作成。';$('home').classList.toggle('active',!d);$('dict').classList.toggle('active',d)};
+const views={home:['work','関数ワークベンチ','シートに表を貼り付けて、目的に合った数式を作成。'],dict:['library','関数一覧','構文と引数を確かめて、そのまま数式に使えます。'],'study-tab':['study','関数の学習','用途ごとに最適な関数を覚える。']};
+let studyMounted=false;
+function showView(id){if(!views[id])return;for(const [tab,[section]] of Object.entries(views)){const on=tab===id;if($(section))$(section).hidden=!on;const b=$(tab);if(b){b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')}}$('platforms').hidden=id!=='home';$('title').textContent=views[id][1];$('intro').textContent=views[id][2];document.body.dataset.view=views[id][0];if(id==='study-tab'&&!studyMounted&&window.FormulaStudy?.mount&&$('study')){studyMounted=true;try{window.FormulaStudy.mount($('study'))}catch(e){studyMounted=false;console.error(e)}}}
+for(const id of Object.keys(views))if($(id))$(id).onclick=()=>showView(id);
 render();examples();suggest();
 
 $('origin').onchange=()=>{
@@ -67,29 +70,8 @@ $('origin').onchange=()=>{
   if(Object.keys(calculated).length){field.value=col(0)+topRow;$('applyStatus').textContent='数式の参照位置を保持するため、このシートの起点は固定されています。';return} left=columnIndex(match[1]);topRow=Number(match[2]);field.value=col(0)+topRow;render();suggest();
 };
 
-const normalizeSearch = text => text.normalize('NFKC').toLowerCase().trim();
-const functionRows = Array.from($('fntable').tBodies[0].rows, row => ({
-  row, text: normalizeSearch(Array.from(row.cells, cell => cell.textContent).join(' '))
-}));
-function filterFunctions() {
-  const terms = normalizeSearch($('fnsearch').value).split(/\s+/).filter(Boolean);
-  const category = $('fncategory').value;
-  const software = $('fnsoftware').value;
-  let count = 0;
-  for (const {row, text} of functionRows) {
-    const visible = (!category || row.cells[1].textContent === category) &&
-      (!software || row.cells[Number(software)].textContent === '○') &&
-      terms.every(term => text.includes(term));
-    row.hidden = !visible;
-    if (visible) count++;
-  }
-  $('fncount').textContent = count + ' / ' + functionRows.length + ' 件';
-  $('fnempty').hidden = count > 0;
-}
-$('fnsearch').oninput = filterFunctions;
-$('fncategory').onchange = filterFunctions;
-$('fnsoftware').onchange = filterFunctions;
-if (location.hash === '#functions') $('dict').click();
+// 関数一覧の描画・絞り込みは fnlist.js が担当する。
+addEventListener('DOMContentLoaded',()=>{if(location.hash==='#functions')showView('dict');else if(location.hash==='#study')showView('study-tab')});
 
 const sheets = [];
 let activeSheet = 0;
